@@ -1,0 +1,16 @@
+/* CSS for FormulaExerciseXBlock */
+
+pre {
+    display: block;
+    font-family: monospace;
+    white-space: pre;
+    margin: 1em 0;
+}
+
+.formula_exercise_block_block .count {
+    font-weight: bold;
+}
+
+.formula_exercise_block_block p {
+    cursor: pointer;
+}
