@@ -110,6 +110,31 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         frag.add_javascript(self.resource_string("static/js/src/formula_exercise_block.js"))
         frag.initialize_js('FormulaExerciseXBlock')
         return frag
+    
+    
+    def studio_view(self, context):
+        """
+        Render a form for editing this XBlock (override the StudioEditableXBlockMixin's method)
+        """
+        fragment = Fragment()
+        context = {'fields': []}
+        # Build a list of all the fields that can be edited:
+        for field_name in self.editable_fields:
+            field = self.fields[field_name]
+            assert field.scope in (Scope.content, Scope.settings), (
+                "Only Scope.content or Scope.settings fields can be used with "
+                "StudioEditableXBlockMixin. Other scopes are for user-specific data and are "
+                "not generally created/configured by content authors in Studio."
+            )
+            field_info = self._make_field_info(field_name, field)
+            if field_info is not None:
+                context["fields"].append(field_info)
+        fragment.content = loader.render_template('static/html/formula_exercise_studio_edit.html', context)
+        fragment.add_css(self.resource_string("static/css/formula_exercise_block_studio_edit.css"))
+        fragment.add_javascript(loader.load_unicode('static/js/src/formula_exercise_studio_edit.js'))
+        fragment.initialize_js('StudioEditableXBlockMixin')
+        return fragment
+    
 
 
     @XBlock.json_handler
