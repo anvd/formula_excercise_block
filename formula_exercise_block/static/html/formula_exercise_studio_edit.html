@@ -1,6 +1,6 @@
 {% load i18n %}
 <div class="editor-with-buttons">
-	<div class="wrapper-comp-settings is-active editor-with-buttons general_information" name="general_information" id="settings-tab">
+	<div class="wrapper-comp-settings is-active editor-with-buttons general_information" name="general_information-tab" id="settings-tab">
 		<ul class="list-input settings-list">
 			{% for field in fields %}
 				<li
@@ -101,7 +101,7 @@
 	</div>
   
   
-	<div class="wrapper-comp-settings is-active editor-with-buttons question_template" name="question_template">
+	<div class="wrapper-comp-settings is-active editor-with-buttons question_template" name="question_template-tab">
 		{% comment %}
 			TODO add "template_fields" list to Python code (formula_exercise_block.py : studio_view.html)
 		
@@ -110,17 +110,21 @@
 			3. expressions
 		{% endcomment %}
 		<ul class="list-input settings-list" name="question_template_list">
-	        <li
-	          class="field comp-setting-entry metadata_entry"
-	          data-field-name="Question template"
-	          data-default="Question template default value"
-	          data-cast="String"
-	        >
+	        <li class="field comp-setting-entry metadata_entry">
 				<div class="wrapper-comp-setting">
-					<label class="label setting-label" for="xb-field-edit-question_template">Question template</label>
-					<textarea data-field-name="question_template" id="xb-field-edit-question_template" rows=10 cols=70>Question template content</textarea>
+					<label class="label setting-label" for="question_template">Question template</label>
+					<textarea name="question_template" rows=10 cols=70>{{ question_template }}</textarea>
 	        	</div>
 	        </li>
+	        
+	        
+	        <li class="field comp-setting-entry metadata_entry">
+				<div class="wrapper-comp-setting">
+					<label class="label setting-label" for="xb-field-edit-xblock_id">XBlock ID</label>
+					<input type="text" id="xblock_id" value="{{ xblock_id }}">
+	        	</div>
+	        </li>
+	        
 	        
 	        
 	        <li
@@ -133,12 +137,29 @@
 					<table name="variables_table" class="variables_table">
 						<tr class="formula_edit_table_header_color">
 							<th width="15%" class="table_cell_alignment">Variables</th>
-							<th width="25%" class="table_cell_alignment">Name</th>
+							<th width="15%" class="table_cell_alignment">Name</th>
 							<th width="3%"></th>
-							<th width="42%" class="table_cell_alignment">Data</th>
+							<th width="13%" class="table_cell_alignment">Min</th>
+							<th width="13%" class="table_cell_alignment">Max</th>
+							<th width="13%" class="table_cell_alignment">Type</th>
+							<th width="13%" class="table_cell_alignment">Accuracy</th>
 							<th width="10%"></th>
 							<th width="5%"></th>
 						</tr>
+
+						{% for variable_name, variable in variables.iteritems %}
+							<tr class="formula_edit_table_row">
+								<td></td>		
+								<td class="table_cell_alignment"><input type="text" name="variable-{{ variable.name }}" class="formula_input_text" value="{{ variable.name }}"></td>
+								<td></td>
+								<td class="table_cell_alignment"><input type="text" name="variable_min_value-{{ variable.name }}" class="formula_input_text" value="{{ variable.min_value }}"></td>
+								<td class="table_cell_alignment"><input type="text" name="variable_max_value-{{ variable.name }}" class="formula_input_text" value="{{ variable.max_value }}"></td>
+								<td class="table_cell_alignment"><input type="text" name="variable_type-{{ variable.name }}-{{ variable.type }}" class="formula_input_text" value="{{ variable.type }}"></td>
+								<td class="table_cell_alignment"><input type="text" name="variable_accuracy-{{ variable.name }}" class="formula_input_text" value="{{ variable.accuracy }}"></td>
+								<td class="table_cell_alignment"><input type="button" class="formula_edit_button" value="Remove"></td>
+								<td></td>
+							</tr>						
+						{% endfor %}
 					</table>
 				
 	        	</div>
@@ -156,12 +177,25 @@
 					<table name="expressions_table" class="variables_table">
 						<tr class="formula_edit_table_header_color">
 							<th width="15%" class="table_cell_alignment">Expressions</th>
-							<th width="25%" class="table_cell_alignment">Name</th>
+							<th width="15%" class="table_cell_alignment">Name</th>
 							<th width="3%"></th>
-							<th width="42%" class="table_cell_alignment">Formula</th>
+							<th width="26%" class="table_cell_alignment">Formula</th>
+							<th width="26%" class="table_cell_alignment">Accuracy</th>
 							<th width="10%"></th>
 							<th width="5%"></th>
 						</tr>
+
+						{% for expression_name, expression in expressions.iteritems %}
+							<tr class="formula_edit_table_row">
+								<td></td>		
+								<td class="table_cell_alignment"><input type="text" name="expression-{{ expression_name }}" class="formula_input_text" value="{{ expression.name }}"></td>
+								<td></td>
+								<td class="table_cell_alignment"><input type="text" name="expression_formula-{{ expression_name }}" class="formula_input_text" value="{{ expression.formula }}"></td>
+								<td class="table_cell_alignment"><input type="text" name="expression_accuracy-{{ expression_name }}-accuracy" class="formula_input_text" value="{{ expression.accuracy }}"></td>
+								<td class="table_cell_alignment"><input type="button" class="formula_edit_button" value="Remove"></td>
+								<td></td>
+							</tr>						
+						{% endfor %}
 					</table>
 	        	</div>
 	        </li>
