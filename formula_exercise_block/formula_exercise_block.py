@@ -12,13 +12,12 @@ from sub_api_util import SubmittingXBlockMixin
 from xblockutils.studio_editable import StudioEditableXBlockMixin
 from xblockutils.resources import ResourceLoader
 
-import mysql.connector
-from mysql.connector import errorcode
-import settings as s
-
-import question_generator
+import question_service
+import db_service
+from formula_exercise_block import question_service
 
 loader = ResourceLoader(__name__)
+
 
 class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockMixin):
     """
@@ -57,12 +56,6 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         values={"min": 0}, 
         scope=Scope.user_state)
     
-    question = String(
-      display_name="Generated question", 
-        help="Generated question", 
-        default="",
-        scope=Scope.user_state)
-    
     energy = Integer(
         display_name="Calculated energy",
         help="Result input by learner",
@@ -71,11 +64,17 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     
     
     xblock_id = None
-    newly_created_block = False
+    newly_created_block = True
     
-    question_template = "What is the energy to raise <n> apples to <m> meters?"
+    question_template = ""
     variables = {}
     expressions = {}
+    
+    
+    generated_question = ""
+    generated_variables = {}
+    
+    
     
 
     # Fields are defined on the class.  You can access them in your code as
@@ -89,27 +88,40 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         data = pkg_resources.resource_string(__name__, path)
         return data.decode("utf8")
 
-    # TO-DO: change this view to display your data your own way.
+
     def student_view(self, context=None):
         """
         The primary view of the FormulaExerciseXBlock, shown to students
         when viewing courses.
         """
-        
-        
         if self.xblock_id is None:
             self.xblock_id = unicode(self.location.replace(branch=None, version=None))
         
-        if (self.question == ""):
-            generated_data = question_generator.generate_question(self.question_template)
-            self.apples = generated_data[0]
-            self.meters = generated_data[1]
-            self.question = generated_data[2]
+        
+        if self.newly_created_block:
+            self.newly_created_block =  (db_service.is_block_in_db(self.xblock_id) is False)
+        
+        # generate question template for newly created XBloc
+        if (self.newly_created_block is True):
+            self.question_template, self.variables, self.expressions = question_service.generate_question_template()
+            db_service.create_question_template(self.xblock_id, self.question_template, self.variables, self.expressions)
+            self.newly_created_block = False
+
+        # fetch quetion template if necessary
+        if (self.question_template == ""):
+            self.question_template, self.variables, self.expressions = db_service.fetch_question_template_data(self.xblock_id)
+        
+        
+        # generate question from template if necessary
+        if (self.generated_question == ""):
+            self.generated_question, self.generated_variables = question_service.generate_question(self.question_template, self.variables)
+
             
         context = {
             'point_string': self.point_string,
-            'question': self.question,
-            'energy': self.energy
+            'question': self.generated_question,
+            'variables': self.generated_question,
+            'expressions': self.expressions
         }
         
         frag = Fragment()
@@ -143,7 +155,11 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
                 context["fields"].append(field_info)
                 
         
-        self.fetch_question_template_data()
+        # (re-)fetch data from the database
+        # self.clear_cache_question_template_data()
+        self.question_template, self.variables, self.expressions = db_service.fetch_question_template_data(self.xblock_id)
+        # TODO refresh XBlock's data
+
         context["question_template"] = self.question_template
         context["xblock_id"] = self.xblock_id
         context["variables"] = self.variables
@@ -157,78 +173,12 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         return fragment
     
     
-    def fetch_question_template_data(self):
-        """
-        Fetches question template data from the database:
-            question_template
-            variables
-            expressions
-        """
-        connection = mysql.connector.connect(**s.database)
-        
-        # query question_template
-        question_template_query = "SELECT template FROM edxapp.question_template where xblock_id = '" + self.xblock_id + "'"
-        question_template_cursor = connection.cursor()
-        question_template_cursor.execute(question_template_query)
-        row = question_template_cursor.fetchone()
-        
-        if row is not None:
-            self.question_template = row[0]
-        question_template_cursor.close()
-        
-        
-        # query variables
-        variable_query = "SELECT name, type, min_value, max_value, type, accuracy FROM edxapp.variable WHERE xblock_id = '" + self.xblock_id + "'"
-        variable_query_cursor = connection.cursor()
-        variable_query_cursor.execute(variable_query)
-        row = variable_query_cursor.fetchone()
-        
-        
-        # fetch variables from the result set
-        while row is not None:
-            variable = {}
-            variable['name'] = row[0]
-            variable['type'] = row[1]
-            variable['min_value'] = row[2]
-            variable['max_value'] = row[3]
-            variable['type'] = row[4]
-            variable['accuracy'] = row[5]
-            
-            self.variables[variable['name']] = variable
-            row = variable_query_cursor.fetchone()
-            
-        variable_query_cursor.close()
-        
-        
-        # query expressions
-        expression_query = "SELECT name, formula, accuracy FROM edxapp.expression WHERE xblock_id = '" + self.xblock_id + "'"
-        expression_query_cursor = connection.cursor()
-        expression_query_cursor.execute(expression_query)
-        row = expression_query_cursor.fetchone()
-        
-        
-        # fetch expressions from the result set
-        while row is not None:
-            expression = {}
-            expression['name'] = row[0]
-            expression['formula'] = row[1]
-            expression['accuracy'] = row[2]
-            
-            self.expressions[expression['name']] = expression
-            row = expression_query_cursor.fetchone()
-            
-        expression_query_cursor.close()
-        
-        
-        connection.close()
-    
-    
-    def generate_question_template_data(self):
-        """
-        Generates data for a newly created question template
-        """
-        
-        pass
+
+    def clear_cache_question_template_data(self):
+        self.question_template = ""
+        self.variables.clear()
+        self.expressions.clear()
+
 
 
     @XBlock.json_handler
@@ -240,7 +190,7 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         
         submitted_energy = data["energy"]
         self.energy = int(submitted_energy) # ??? correct way to set value?
-        if question_generator.is_answer_correct(int(self.apples), int(self.meters), int(self.energy)):
+        if question_service.is_answer_correct(int(self.apples), int(self.meters), int(self.energy)):
             sub_api.set_score(submission['uuid'], self.max_points, self.max_points)
         else:
             sub_api.set_score(submission['uuid'], 0, self.max_points)
@@ -265,103 +215,20 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         if self.xblock_id is None:
             self.xblock_id = unicode(self.location.replace(branch=None, version=None))
         
-        connection = mysql.connector.connect(**s.database)
-        
-        self.clean_up_variables_and_expressions(connection)
-        
-        # question_template
         question_template = data['question_template']
-        self.update_or_insert_question_template(connection, question_template)
-        
-        # variables dict
         updated_variables = data['variables']
-        self.create_variables(connection, updated_variables)
-        
-        # expressions dict
         updated_expressions = data['expressions']
-        self.create_expressions(connection, updated_expressions)
+        db_service.update_question_template(self.xblock_id, question_template, updated_variables, updated_expressions)
         
-        connection.commit()
-        connection.close()
+    
+        # "refresh" XBlock's values
+        self.question_template = question_template
+        self.variables = updated_variables
+        self.expressions = updated_expressions
+        
+        # TODO re-generate: question, variables, expressions
     
     
-    def clean_up_variables_and_expressions(self, connection):
-        """
-        Removes variables and expressions of the question template
-        """
-        
-        cursor = connection.cursor()
-        
-        # remove variables
-        VARIABLES_REMOVE_QUERY = ("DELETE FROM edxapp.variable WHERE xblock_id = '" + self.xblock_id + "'")
-        cursor.execute(VARIABLES_REMOVE_QUERY)
-        
-        # remove expressions
-        EXPRESSIONS_REMOVE_QUERY = ("DELETE FROM edxapp.expression WHERE xblock_id = '" + self.xblock_id + "'")
-        cursor.execute(EXPRESSIONS_REMOVE_QUERY)
-        
-        cursor.close()
-    
-    
-    def update_or_insert_question_template(self, connection, question_template):
-        """
-        Updates or inserts question template
-        """
-        
-        # 1. if exist the record then update it
-        # 2 else update it
-        cursor = connection.cursor()
-        query = ""
-        if self.is_block_newly_created(connection):
-            query = "INSERT INTO edxapp.question_template (xblock_id, template) VALUES ('" + self.xblock_id + "', '" + question_template + "')"
-        else:
-            query = "UPDATE edxapp.question_template SET template = '" + question_template + "' WHERE xblock_id = '" + self.xblock_id + "'"
-        
-        cursor.execute(query)
-        cursor.close()
-    
-    
-    def create_variables(self, connection, updated_variables):
-        """
-        Creates variables for a question template
-        """
-        
-        cursor = connection.cursor()
-        query = "INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, accuracy) VALUES (%s, %s, %s, %s, %s, %s)"
-        for variable_name, variable in updated_variables.iteritems():
-            updated_variable_data = (self.xblock_id, variable_name, variable['type'], variable['min_value'], variable['max_value'], variable['accuracy'])
-            cursor.execute(query, updated_variable_data)
-        
-        cursor.close()
-    
-    
-    def create_expressions(self, connection, updated_expressions):
-        """
-        Create expressions for a question template
-        """
-        
-        cursor = connection.cursor()
-        query = "INSERT INTO edxapp.expression (xblock_id, name, formula, accuracy) VALUES (%s, %s, %s, %s)"
-        for expression_name, expression in updated_expressions.iteritems():
-            updated_expression_data = (self.xblock_id, expression_name, expression['formula'], expression['accuracy'])
-            cursor.execute(query, updated_expression_data)
-        
-        cursor.close()
-        pass
-    
-    
-    def is_block_newly_created(self, connection):
-        if self.newly_created_block is False:
-            query = "SELECT id FROM edxapp.question_template WHERE xblock_id = '" + self.xblock_id + "'"
-            cursor = connection.cursor()
-            cursor.execute(query)
-        
-            self.newly_created_block = cursor.rowcount == 0
-            cursor.close()
-            
-        return self.newly_created_block
-
-
     @property
     def point_string(self):
         score = sub_api.get_score(self.student_item_key)

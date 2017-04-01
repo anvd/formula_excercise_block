@@ -4,15 +4,21 @@
 
 	<pre>{{ question }}</pre>
 	
-    <!-- Energy field -->
-	<input
-	  type="number"
-	  class="field-data-control"
-	  id="energy"
-	  value="{{ energy }}"
-	>
-	<br/>
-	<br/>
+    <!-- Expressions -->
+	<div class="wrapper-comp-setting">
+		<table name="expressions_table" class="variables_table">
+			{% for expression_name, expression in expressions.iteritems %}
+				<tr class="formula_edit_table_row">
+					<td width="10%"></td>		
+					<td width="15%" class="table_cell_alignment"><label class="label setting-label expression_name_alignment" for="expression-{{expression.name}}">{{expression.name}}</label></td>
+					<td width="5%"></td>
+					<td width="40%" class="table_cell_alignment"><input type="text" class="field-data-control formula_value_input" id="expression-{{expression.name}}" value=""></td>
+					<td width="30%"></td>
+				</tr>						
+			{% endfor %}
+		</table>
+	</div>
 
+	<br/>
     <input type="button" class="input-main" name='submit-button' value="Submit" />
 </div>

@@ -156,7 +156,7 @@
 								<td class="table_cell_alignment"><input type="text" name="variable_max_value-{{ variable.name }}" class="formula_input_text" value="{{ variable.max_value }}"></td>
 								<td class="table_cell_alignment"><input type="text" name="variable_type-{{ variable.name }}-{{ variable.type }}" class="formula_input_text" value="{{ variable.type }}"></td>
 								<td class="table_cell_alignment"><input type="text" name="variable_accuracy-{{ variable.name }}" class="formula_input_text" value="{{ variable.accuracy }}"></td>
-								<td class="table_cell_alignment"><input type="button" class="formula_edit_button" value="Remove"></td>
+								<td class="table_cell_alignment"><input type="button" class="remove_button" value="Remove"></td>
 								<td></td>
 							</tr>						
 						{% endfor %}
@@ -192,7 +192,7 @@
 								<td></td>
 								<td class="table_cell_alignment"><input type="text" name="expression_formula-{{ expression_name }}" class="formula_input_text" value="{{ expression.formula }}"></td>
 								<td class="table_cell_alignment"><input type="text" name="expression_accuracy-{{ expression_name }}-accuracy" class="formula_input_text" value="{{ expression.accuracy }}"></td>
-								<td class="table_cell_alignment"><input type="button" class="formula_edit_button" value="Remove"></td>
+								<td class="table_cell_alignment"><input type="button" class="remove_button" value="Remove"></td>
 								<td></td>
 							</tr>						
 						{% endfor %}

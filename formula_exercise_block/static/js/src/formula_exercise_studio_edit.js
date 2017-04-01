@@ -12,9 +12,6 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
         "question_template-tab": "Template",
     };
     
-    var question_template_list_element = $(xblockElement).find('ul[name=question_template_list]');
-    var variables_table_element = $(xblockElement).find('table[name=variables_table]');
-    var expressions_table_element = $(xblockElement).find('table[name=expressions_table]');
     var question_template_textarea_element = $(xblockElement).find('textarea[name=question_template]');
     var variables_table_element = $(xblockElement).find('table[name=variables_table]');
     var expressions_table_element = $(xblockElement).find('table[name=expressions_table]');
@@ -327,7 +324,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
 
     	var remove_variable_button = $('<input />');
     	remove_variable_button.attr("type", "button");
-    	remove_variable_button.attr("class", "formula_edit_button");
+    	remove_variable_button.attr("class", "remove_button");
     	remove_variable_button.attr("value", "Remove");
     	eigth_column.append(remove_variable_button);
     	new_row.append(eigth_column);
@@ -407,7 +404,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
 
     	var remove_expression_button = $('<input />');
     	remove_expression_button.attr("type", "button");
-    	remove_expression_button.attr("class", "formula_edit_button");
+    	remove_expression_button.attr("class", "remove_button");
     	remove_expression_button.attr("value", "Remove");
     	sixth_column.append(remove_expression_button);
     	new_row.append(sixth_column);
@@ -479,6 +476,22 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
 
         $('#question_template-tab').click(function() {
             tab_switch("question_template-tab");
+        });
+        
+        
+        // listeners for "Remove" buttons of "Variables"
+        variables_table_element.find('input[type=button][class=remove_button]').bind('click', function(e) {
+        	var removeButton = $(this);
+        	var parentRow = removeButton.closest('tr');
+        	parentRow.remove();
+        });
+        
+        
+        // listeners for "Remove" buttons of Expressions"
+        expressions_table_element.find('input[type=button][class=remove_button]').bind('click', function(e) {
+        	var removeButton = $(this);
+        	var parentRow = removeButton.closest('tr');
+        	parentRow.remove();
         });
     });
     
