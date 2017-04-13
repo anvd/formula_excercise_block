@@ -7,11 +7,11 @@ def create_dummy_data(xblock_id):
     """
         INSERT INTO edxapp.question_template (xblock_id, question_template) VALUES (?, ?)
 
-        INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, accuracy) VALUES (?, a, int, 0, 10)
-        INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, accuracy) VALUES (?, b, int, 10, 100)
+        INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, decimal_places) VALUES (?, a, int, 0, 10)
+        INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, decimal_places) VALUES (?, b, int, 10, 100)
 
-        INSERT INTO edxapp.expression (xblock_id, name, formula, accuracy) VALUES (?, Tong, a+b)
-        INSERT INTO edxapp.expression (xblock_id, name, formula, accuracy) VALUES (?, Hieu, a-b)
+        INSERT INTO edxapp.expression (xblock_id, name, formula, decimal_places) VALUES (?, Tong, a+b)
+        INSERT INTO edxapp.expression (xblock_id, name, formula, decimal_places) VALUES (?, Hieu, a-b)
     """
     
     connection = mysql.connector.connect(**s.database)
@@ -25,7 +25,7 @@ def create_dummy_data(xblock_id):
 
     
     # create variables
-    variable_template_query = "INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, accuracy) VALUES (%s, %s, %s, %s, %s, %s)"
+    variable_template_query = "INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, decimal_places) VALUES (%s, %s, %s, %s, %s, %s)"
     
     # "a" variable
     a_variable_data = (xblock_id, 'a', 'int', 0, 10, 2)
@@ -37,14 +37,14 @@ def create_dummy_data(xblock_id):
     
     
     # create expressions
-    expression_template_query = "INSERT INTO edxapp.expression (xblock_id, name, formula, accuracy) VALUES (%s, %s, %s, %s)"
+    expression_template_query = "INSERT INTO edxapp.expression (xblock_id, name, type, formula, decimal_places) VALUES (%s, %s, %s, %s, %s)"
     
     # 'Tong' expression
-    tong_expression_data = (xblock_id, 'Tong', 'a+b', 2)
+    tong_expression_data = (xblock_id, 'Tong', 'float', 'a+b', 2)
     cursor.execute(expression_template_query, tong_expression_data)
     
     # 'Hieu' expression
-    hieu_expression_data = (xblock_id, 'Hieu', 'a-b', 3)
+    hieu_expression_data = (xblock_id, 'Hieu', 'float', 'a-b', 3)
     cursor.execute(expression_template_query, hieu_expression_data)
     
     connection.commit()

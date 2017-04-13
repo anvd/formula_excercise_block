@@ -1,5 +1,10 @@
 {% load i18n %}
+
 <div class="editor-with-buttons">
+
+	<div name="error-message"></div>
+	
+
 	<div class="wrapper-comp-settings is-active editor-with-buttons general_information" name="general_information-tab" id="settings-tab">
 		<ul class="list-input settings-list">
 			{% for field in fields %}
@@ -102,13 +107,6 @@
   
   
 	<div class="wrapper-comp-settings is-active editor-with-buttons question_template" name="question_template-tab">
-		{% comment %}
-			TODO add "template_fields" list to Python code (formula_exercise_block.py : studio_view.html)
-		
-			1. question_template
-			2. variables
-			3. expressions
-		{% endcomment %}
 		<ul class="list-input settings-list" name="question_template_list">
 	        <li class="field comp-setting-entry metadata_entry">
 				<div class="wrapper-comp-setting">
@@ -118,15 +116,7 @@
 	        </li>
 	        
 	        
-	        <li class="field comp-setting-entry metadata_entry">
-				<div class="wrapper-comp-setting">
-					<label class="label setting-label" for="xb-field-edit-xblock_id">XBlock ID</label>
-					<input type="text" id="xblock_id" value="{{ xblock_id }}">
-	        	</div>
-	        </li>
-	        
-	        
-	        
+
 	        <li
 	          class="field comp-setting-entry metadata_entry"
 	          data-field-name="Variable"
@@ -137,12 +127,11 @@
 					<table name="variables_table" class="variables_table">
 						<tr class="formula_edit_table_header_color">
 							<th width="15%" class="table_cell_alignment">Variables</th>
-							<th width="15%" class="table_cell_alignment">Name</th>
-							<th width="3%"></th>
+							<th width="18%" class="table_cell_alignment">Name</th>
 							<th width="13%" class="table_cell_alignment">Min</th>
 							<th width="13%" class="table_cell_alignment">Max</th>
 							<th width="13%" class="table_cell_alignment">Type</th>
-							<th width="13%" class="table_cell_alignment">Accuracy</th>
+							<th width="13%" class="table_cell_alignment">Decimal Places</th>
 							<th width="10%"></th>
 							<th width="5%"></th>
 						</tr>
@@ -151,21 +140,22 @@
 							<tr class="formula_edit_table_row">
 								<td></td>		
 								<td class="table_cell_alignment"><input type="text" name="variable-{{ variable.name }}" class="formula_input_text" value="{{ variable.name }}"></td>
-								<td></td>
-								<td class="table_cell_alignment"><input type="text" name="variable_min_value-{{ variable.name }}" class="formula_input_text" value="{{ variable.min_value }}"></td>
-								<td class="table_cell_alignment"><input type="text" name="variable_max_value-{{ variable.name }}" class="formula_input_text" value="{{ variable.max_value }}"></td>
-								<td class="table_cell_alignment"><input type="text" name="variable_type-{{ variable.name }}-{{ variable.type }}" class="formula_input_text" value="{{ variable.type }}"></td>
-								<td class="table_cell_alignment"><input type="text" name="variable_accuracy-{{ variable.name }}" class="formula_input_text" value="{{ variable.accuracy }}"></td>
+								<td class="table_cell_alignment number_input_cell"><input type="number" name="variable_min_value-{{ variable.name }}" class="formula_input_text" value="{{ variable.min_value }}"></td>
+								<td class="table_cell_alignment number_input_cell"><input type="number" name="variable_max_value-{{ variable.name }}" class="formula_input_text" value="{{ variable.max_value }}"></td>
+								<td class="table_cell_alignment">
+									<select name="variable_type-{{ variable.name }}-{{ variable.type }}" class="formula_input_text">
+										<option value="int" {% if variable.type == "int" %}selected="true"{% endif %}>int</option>
+										<option value="float" {% if variable.type == "float" %}selected="true"{% endif %}>float</option>
+									</select>
+								</td>
+								<td class="table_cell_alignment number_input_cell"><input type="number" name="variable_value_decimal_places-{{ variable.name }}" class="formula_input_text" min="0" max="7" value="{{ variable.decimal_places }}"></td>
 								<td class="table_cell_alignment"><input type="button" class="remove_button" value="Remove"></td>
 								<td></td>
 							</tr>						
 						{% endfor %}
 					</table>
-				
 	        	</div>
 	        </li>
-
-
 
 	        <li
 	          class="field comp-setting-entry metadata_entry"
@@ -177,10 +167,10 @@
 					<table name="expressions_table" class="variables_table">
 						<tr class="formula_edit_table_header_color">
 							<th width="15%" class="table_cell_alignment">Expressions</th>
-							<th width="15%" class="table_cell_alignment">Name</th>
-							<th width="3%"></th>
-							<th width="26%" class="table_cell_alignment">Formula</th>
-							<th width="26%" class="table_cell_alignment">Accuracy</th>
+							<th width="18%" class="table_cell_alignment">Name</th>
+							<th width="12%" class="table_cell_alignment">Type</th>
+							<th width="25%" class="table_cell_alignment">Formula</th>
+							<th width="15%" class="table_cell_alignment">Decimal Places</th>
 							<th width="10%"></th>
 							<th width="5%"></th>
 						</tr>
@@ -189,9 +179,14 @@
 							<tr class="formula_edit_table_row">
 								<td></td>		
 								<td class="table_cell_alignment"><input type="text" name="expression-{{ expression_name }}" class="formula_input_text" value="{{ expression.name }}"></td>
-								<td></td>
+								<td class="table_cell_alignment">
+									<select name="expression-{{ expression_name }}-{{expression.type}}" class="formula_input_text">
+										<option value="int" {% if expression.type == "int" %}selected="true"{% endif %}>int</option>
+										<option value="float" {% if expression.type == "float" %}selected="true"{% endif %}>float</option>
+									</select>
+								</td>
 								<td class="table_cell_alignment"><input type="text" name="expression_formula-{{ expression_name }}" class="formula_input_text" value="{{ expression.formula }}"></td>
-								<td class="table_cell_alignment"><input type="text" name="expression_accuracy-{{ expression_name }}-accuracy" class="formula_input_text" value="{{ expression.accuracy }}"></td>
+								<td class="table_cell_alignment number_input_cell"><input type="number" name="expression_value_decimal_places-{{ expression_name }}" class="formula_input_text" min="0" max="7" value="{{ expression.decimal_places }}"></td>
 								<td class="table_cell_alignment"><input type="button" class="remove_button" value="Remove"></td>
 								<td></td>
 							</tr>						

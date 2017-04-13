@@ -7,6 +7,10 @@ pre {
     margin: 1em 0;
 }
 
+.fe_student_expressions_table {
+    width: 100%;
+}
+
 .formula_edit_table_row {
     height: 40px;
 }

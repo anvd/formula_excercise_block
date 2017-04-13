@@ -7,19 +7,20 @@ CREATE TABLE edxapp.question_template (
 CREATE TABLE edxapp.variable (
 	id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	xblock_id VARCHAR(255) NOT NULL,
-	name VARCHAR(32),
-	type VARCHAR(32),
-	min_value INT(6),
-	max_value INT(6),
-	accuracy INT(3),
+	name VARCHAR(32) NOT NULL,
+	type VARCHAR(32) NOT NULL,
+	min_value INT(6) NOT NULL,
+	max_value INT(6) NOT NULL,
+	decimal_places INT(3),
 	FOREIGN KEY (xblock_id) REFERENCES edxapp.question_template(xblock_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=40;
 
 CREATE TABLE edxapp.expression (
 	id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 	xblock_id VARCHAR(255) NOT NULL,
-	name VARCHAR(32),
+	name VARCHAR(32) NOT NULL,
+	type VARCHAR(32) NOT NULL,
 	formula VARCHAR(2048) NOT NULL,
-	accuracy INT(3),
+	decimal_places INT(3),
 	FOREIGN KEY (xblock_id) REFERENCES edxapp.question_template(xblock_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci AUTO_INCREMENT=40;

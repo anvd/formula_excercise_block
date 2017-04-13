@@ -1,18 +1,26 @@
 <div class="problem-progress">{{ point_string }}</div>
 
+<input type="hidden" name="question_template" value="{{saved_question_template}}">
+<input type="hidden" name="variables" value="{{serialized_variables}}">
+<input type="hidden" name="expressions" value="{{serialized_expressions}}">
+<input type="hidden" name="generated_variables" value="{{serialized_generated_variables}}">
+<input type="hidden" name="generated_question" value="{{question}}">
+<input type="hidden" name="xblock_id" value="{{xblock_id}}">
+
+
 <div class="formula_exercise_block_block">
 
 	<pre>{{ question }}</pre>
 	
     <!-- Expressions -->
 	<div class="wrapper-comp-setting">
-		<table name="expressions_table" class="variables_table">
-			{% for expression_name, expression in expressions.iteritems %}
+		<table name="student_view_expressions_table" class="fe_student_expressions_table">
+			{% for expression_name, expression_value in submitted_expressions.iteritems %}
 				<tr class="formula_edit_table_row">
 					<td width="10%"></td>		
-					<td width="15%" class="table_cell_alignment"><label class="label setting-label expression_name_alignment" for="expression-{{expression.name}}">{{expression.name}}</label></td>
+					<td width="15%" class="table_cell_alignment"><label class="label setting-label expression_name_alignment" for="expression-{{expression_name}}">{{expression_name}}</label></td>
 					<td width="5%"></td>
-					<td width="40%" class="table_cell_alignment"><input type="text" class="field-data-control formula_value_input" id="expression-{{expression.name}}" value=""></td>
+					<td width="40%" class="table_cell_alignment"><input type="text" class="field-data-control formula_value_input" id="expression-{{expression_name}}" value="{{ expression_value }}"></td>
 					<td width="30%"></td>
 				</tr>						
 			{% endfor %}

@@ -15,6 +15,18 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     var question_template_textarea_element = $(xblockElement).find('textarea[name=question_template]');
     var variables_table_element = $(xblockElement).find('table[name=variables_table]');
     var expressions_table_element = $(xblockElement).find('table[name=expressions_table]');
+    
+    var error_message_element = $(xblockElement).find('div[name=error-message]');
+    
+
+   function fillErrorMessage(errorMessage) {
+		error_message_element.empty();
+
+		if (errorMessage != null) {
+			var errorLabelNode = "<label class='validation_error'>" + errorMessage + "</label>";
+			error_message_element.append(errorLabelNode);
+		}
+    }
 
     $(xblockElement).find('.field-data-control').each(function() {
         var $field = $(this);
@@ -65,6 +77,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
             $field.datepicker({dateFormat: "m/d/yy"});
         }
     });
+
 
     $(xblockElement).find('.wrapper-list-settings .list-set').each(function() {
         var $optionList = $(this);
@@ -128,10 +141,12 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
             runtime.notify('error', {title: gettext("Unable to update settings"), message: message});
         });
     };
+    
 
     $(xblockElement).find('a[name=save_button]').bind('click', function(e) {
     	console.log("Save button clicked");
     	
+    	error_message_element.empty();
     	
     	// "General information" tab
         e.preventDefault();
@@ -155,7 +170,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
         // "Template" tab
         /*
 			1. question_template
-			2. variables (name, min_valua, max_value, type, accuracy)
+			2. variables (name, min_valua, max_value, type, decimal_places)
 			3. expressions
         */
         // 1. question_template_textarea_element
@@ -170,28 +185,62 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     			
     			var columns = $(this).find('td');
     			
-    			// 1st column: "variable name"
+    			// 2nd column: "variable name"
     			var variable_name = columns.eq(1).children().eq(0).val();
+
+    			if (variable_name.length == 0) { // empty variable name
+    				fillErrorMessage('Variable name can not be empty');
+    				return false;
+    			}
+    			
+    			if (variables.hasOwnProperty(variable_name)) { // duplicate verification
+    				fillErrorMessage('Variable names can not be duplicated');
+    				return false;
+    			}
+    			
     			variable['name'] = variable_name;
+
     			
     			// 3rd column: "min_value"
-    			var min_value = columns.eq(3).children().eq(0).val();
-    			variable['min_value'] = min_value;
+    			var min_value = columns.eq(2).children().eq(0).val();
     			
-    			// 4st column: "max_value"
-    			var max_value = columns.eq(4).children().eq(0).val();
+    			if (min_value.length == 0) { // empty min_value
+    				fillErrorMessage('min_value can not be empty');
+    				return false;
+    			}
+    			
+    			variable['min_value'] = min_value;
+
+    			
+    			// 4th column: "max_value"
+    			var max_value = columns.eq(3).children().eq(0).val();
+
+    			if (max_value.length == 0) { // empty max_value
+    				fillErrorMessage('max_value can not be empty');
+    				return false;
+    			}
+    			
+    			var min_value_numer = Number(min_value);
+    			var max_value_number = Number(max_value);
+    			if (min_value_numer > max_value_number) {
+    				fillErrorMessage('min_value can not be bigger than max_value');
+    				return false;
+    			}
+    			
     			variable['max_value'] = max_value;
     			
-    			// 5st column: "type"
-    			var type = columns.eq(5).children().eq(0).val();
+
+    			// 5th column: "type"
+    			var type = columns.eq(4).children().eq(0).val();
     			variable['type'] = type;
+
     			
-    			// 6st column: "accuracy"
-    			var accuracy = columns.eq(6).children().eq(0).val();
-    			variable['accuracy'] = accuracy;
+    			// 6th column: "decimal_places"
+    			var decimal_places = columns.eq(5).children().eq(0).val();
+    			variable['decimal_places'] = decimal_places;
     			
     			variables[variable_name] = variable;
-    			console.log('Row ' + row_index + ': variable_name: ' + variable_name + ', min: ' + min_value + ', max: ' + max_value + ', type: ' + type + ', accuracy: ' + accuracy);
+    			console.log('Row ' + row_index + ': variable_name: ' + variable_name + ', min: ' + min_value + ', max: ' + max_value + ', type: ' + type + ', decimal_places: ' + decimal_places);
     		}
     	});
         
@@ -203,26 +252,52 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     			
     			var columns = $(this).find('td');
     			
-    			// 1st column: "variable name"
+    			// 2nd column: "expression name"
     			var expression_name = columns.eq(1).children().eq(0).val();
-    			expression['name'] = expression_name;
+
+    			if (expression_name.length == 0) { // empty expression name
+    				fillErrorMessage('Expression name can not be empty');
+    				return false;
+    			}
     			
-    			// 3rd column: "formula"
+    			if (expressions.hasOwnProperty(expression_name)) { // duplicate verification
+    				fillErrorMessage('Expression names can not be duplicated');
+    				return false;
+    			}
+
+    			expression['name'] = expression_name;
+
+    			
+    			// 3rd column: "type"
+    			var expression_type = columns.eq(2).children().eq(0).val();
+    			expression['type'] = expression_type;
+    			
+
+    			// 4rd column: "formula"
     			var expression_formula = columns.eq(3).children().eq(0).val();
+    			if (expression_formula.length == 0) { // empty expression name
+    				fillErrorMessage('Expression formula can not be empty');
+    				return false;
+    			}
+    			// TODO (server side) ceck parsable formula
     			expression['formula'] = expression_formula;
     			
-    			// 4th column: "accuracy"
-    			var expression_accuracy = columns.eq(4).children().eq(0).val();
-    			expression['accuracy'] = expression_accuracy;
+
+    			// 5th column: "decimal_places"
+    			var expression_decimal_places = columns.eq(4).children().eq(0).val();
+    			expression['decimal_places'] = expression_decimal_places;
     			
     			
     			expressions[expression_name] = expression;
     			
-    			console.log('Row ' + row_index + ': expression_name: ' + expression_name + ', formula: '+ expression_formula + ', accuracy: ' + expression_accuracy);
+    			console.log('Row ' + row_index + ': expression_name: ' + expression_name + ', type: ' + expression_type + ', formula: '+ expression_formula + ', decimal_places: ' + expression_decimal_places);
     		}
     	});
         
-        
+        if (error_message_element.children().length > 0) { // client-side validation error
+        	return;
+        }
+        	
         studioSubmit({values: values, defaults: notSet, question_template: question_template, variables: variables, expressions: expressions});
     });
 
@@ -248,7 +323,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     	var new_row = $('<tr></tr>');
     	new_row.attr("class", "formula_edit_table_row");
     	
-    	 // first column
+    	 // first column (empty space)
     	var first_column = $('<td></td>');
     	new_row.append(first_column);
     	
@@ -265,69 +340,76 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     	new_row.append(second_column);
     	
 
-    	// third column
+    	// third column: min value
     	var third_column  = $('<td></td>');
-    	new_row.append(third_column);
-    	
-    	
-    	// fourth column: min value
-    	var fourth_column  = $('<td></td>');
-    	fourth_column.attr("class", "table_cell_alignment");
+    	third_column.attr("class", "table_cell_alignment number_input_cell");
     	
     	var variable_min_value_element = $('<input />');
-    	variable_min_value_element.attr("type", "text");
+    	variable_min_value_element.attr("type", "number");
     	variable_min_value_element.attr("class", "formula_input_text");
-    	variable_min_value_element.attr("value", "");
-    	fourth_column.append(variable_min_value_element);
+    	variable_min_value_element.attr("value", "1");
+    	third_column.append(variable_min_value_element);
+    	new_row.append(third_column);
+
+    	
+    	// fourth column: max value
+    	var fourth_column  = $('<td></td>');
+    	fourth_column.attr("class", "table_cell_alignment number_input_cell");
+    	
+    	var variable_max_value_element = $('<input />');
+    	variable_max_value_element.attr("type", "number");
+    	variable_max_value_element.attr("class", "formula_input_text");
+    	variable_max_value_element.attr("value", "10");
+    	fourth_column.append(variable_max_value_element);
     	new_row.append(fourth_column);
 
     	
-    	// fifth column: max value
+    	// fifth column: type
     	var fifth_column  = $('<td></td>');
     	fifth_column.attr("class", "table_cell_alignment");
     	
-    	var variable_max_value_element = $('<input />');
-    	variable_max_value_element.attr("type", "text");
-    	variable_max_value_element.attr("class", "formula_input_text");
-    	variable_max_value_element.attr("value", "");
-    	fifth_column.append(variable_max_value_element);
+    	var variable_type_element = $('<select></select>');
+    	variable_type_element.attr("class", "formula_input_text");
+    	
+    	var int_option_element = $("<option></option>");
+    	int_option_element.attr("value", "int");
+    	int_option_element.text("int");
+    	int_option_element.attr("selected", "selected");
+    	variable_type_element.append(int_option_element);
+    	
+    	var float_option_element = $("<option></option>");
+    	float_option_element.attr("value", "float");
+    	float_option_element.text("float");
+    	variable_type_element.append(float_option_element);
+    	
+    	fifth_column.append(variable_type_element);
     	new_row.append(fifth_column);
 
     	
-    	// sixth column: type
+    	// sixth column: decimal_places
     	var sixth_column  = $('<td></td>');
-    	sixth_column.attr("class", "table_cell_alignment");
+    	sixth_column.attr("class", "table_cell_alignment number_input_cell");
     	
-    	var variable_type_element = $('<input />');
-    	variable_type_element.attr("type", "text");
-    	variable_type_element.attr("class", "formula_input_text");
-    	variable_type_element.attr("value", "");
-    	sixth_column.append(variable_type_element);
+    	var variable_decimal_places_element = $('<input>');
+    	variable_decimal_places_element.attr("type", "number");
+    	variable_decimal_places_element.attr("min", "0");
+    	variable_decimal_places_element.attr("max", "7");
+    	variable_decimal_places_element.attr("class", "formula_input_text");
+    	variable_decimal_places_element.attr("value", "0");
+    	sixth_column.append(variable_decimal_places_element);
     	new_row.append(sixth_column);
 
-    	
-    	// seventh column: accuracy
+
+    	// seventh column: Remove button
     	var seventh_column  = $('<td></td>');
     	seventh_column.attr("class", "table_cell_alignment");
-    	
-    	var variable_accuracy_element = $('<input />');
-    	variable_accuracy_element.attr("type", "text");
-    	variable_accuracy_element.attr("class", "formula_input_text");
-    	variable_accuracy_element.attr("value", "");
-    	seventh_column.append(variable_accuracy_element);
-    	new_row.append(seventh_column);
 
-
-    	// eigth column: Remove button
-    	var eigth_column  = $('<td></td>');
-    	eigth_column.attr("class", "table_cell_alignment");
-
-    	var remove_variable_button = $('<input />');
+    	var remove_variable_button = $('<input>');
     	remove_variable_button.attr("type", "button");
     	remove_variable_button.attr("class", "remove_button");
     	remove_variable_button.attr("value", "Remove");
-    	eigth_column.append(remove_variable_button);
-    	new_row.append(eigth_column);
+    	seventh_column.append(remove_variable_button);
+    	new_row.append(seventh_column);
     	
     	// add event handler
     	remove_variable_button.click(function() {
@@ -336,15 +418,16 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     	});
 
     	
-    	// nineth column
-    	var nineth_column  = $('<td></td>');
-    	new_row.append(nineth_column);
+    	// eighth column: empty column
+    	var eighth_column  = $('<td></td>');
+    	new_row.append(eighth_column);
     	
     	
     	// append the new row to variables table
     	variables_table_element.append(new_row);
     });
-    
+
+
     
     $(xblockElement).find('a[name=add_expression_button]').bind('click', function(e) {
     
@@ -370,9 +453,27 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     	new_row.append(second_column);
     	
 
-    	// third column
+    	// third column: expression
     	var third_column  = $('<td></td>');
+    	third_column.attr("class", "table_cell_alignment");
+    	
+    	var expression_type_element = $('<select></select>');
+    	expression_type_element.attr("class", "formula_input_text");
+    	
+    	var int_option_element = $("<option></option>");
+    	int_option_element.attr("value", "int");
+    	int_option_element.text("int");
+    	int_option_element.attr("selected", "selected");
+    	expression_type_element.append(int_option_element);
+    	
+    	var float_option_element = $("<option></option>");
+    	float_option_element.attr("value", "float");
+    	float_option_element.text("float");
+    	expression_type_element.append(float_option_element);
+    	
+    	third_column.append(expression_type_element);
     	new_row.append(third_column);
+    	
     	
     	// fourth column: formula
     	var fourth_column  = $('<td></td>');
@@ -386,15 +487,17 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     	new_row.append(fourth_column);
     	
     	
-    	// fifth column: accuracy
+    	// fifth column: decimal_places
     	var fifth_column  = $('<td></td>');
-    	fifth_column.attr("class", "table_cell_alignment");
+    	fifth_column.attr("class", "table_cell_alignment number_input_cell");
     	
-    	var expression_accuracy_element = $('<input />');
-    	expression_accuracy_element.attr("type", "text");
-    	expression_accuracy_element.attr("class", "formula_input_text");
-    	expression_accuracy_element.attr("value", "");
-    	fifth_column.append(expression_accuracy_element);
+    	var expression_decimal_places_element = $('<input />');
+    	expression_decimal_places_element.attr("type", "number");
+    	expression_decimal_places_element.attr("min", "0");
+    	expression_decimal_places_element.attr("max", "7");
+    	expression_decimal_places_element.attr("class", "formula_input_text");
+    	expression_decimal_places_element.attr("value", "0");
+    	fifth_column.append(expression_decimal_places_element);
     	new_row.append(fifth_column);
 
 
@@ -455,8 +558,8 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
         
         update_buttons(toShow);
     }
-    
-    
+
+
     $(function($) {
         for (var b in studio_buttons) {
             $('.editor-modes')
@@ -494,5 +597,4 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
         	parentRow.remove();
         });
     });
-    
 }

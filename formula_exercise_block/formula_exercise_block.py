@@ -14,21 +14,26 @@ from xblockutils.resources import ResourceLoader
 
 import question_service
 import db_service
-from formula_exercise_block import question_service
+import formula_service
+import json
+
+import xblock_deletion_handler
 
 loader = ResourceLoader(__name__)
 
 
+@XBlock.needs("i18n")
 class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockMixin):
     """
     TO-DO: XBlock life-cycle to initialize, open and close connection to MySQL server appropriately
     """
 
     display_name = String(
-        display_name="Title (Display name)", 
-        help="Title to display", 
-        default="Formula Exercise 2", 
-        scope=Scope.settings)
+        display_name="Formula Exercise XBlock",
+        help="This name appears in the horizontal navigation at the top of the page",
+        scope=Scope.settings,
+        default="Formula Exercise XBlock"
+    )
 
     max_attempts = Integer(
         display_name="Maximum Attempts",
@@ -40,31 +45,26 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         help="Defines the maximum points that the learner can earn.",
         default=1,
         scope=Scope.settings)
-
- 
-    apples = Integer(
-        display_name="Apples",
-        help="Number of apples",
-        default=0,
-        values={"min": 0}, 
-        scope=Scope.user_state)
-    
-    meters = Integer(
-        display_name="Meters",
-        help="Height (in meters)",
-        default=0,
-        values={"min": 0}, 
-        scope=Scope.user_state)
-    
-    energy = Integer(
-        display_name="Calculated energy",
-        help="Result input by learner",
-        values={"min": 0}, 
-        scope=Scope.user_state)
     
     
     xblock_id = None
     newly_created_block = True
+    
+    standard_question_template = String(
+        display_name="Question template",
+        help="Question template",
+        scope=Scope.settings,
+        default="???"
+    )
+    
+    standard_variables_str = String(
+        display_name="Standard",
+        help="Question template",
+        scope=Scope.settings,
+        default="???"
+    )
+    
+    
     
     question_template = ""
     variables = {}
@@ -73,6 +73,7 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     
     generated_question = ""
     generated_variables = {}
+    submitted_expressions = {}
     
     
     
@@ -94,6 +95,10 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         The primary view of the FormulaExerciseXBlock, shown to students
         when viewing courses.
         """
+        
+        context = {}
+        self.submitted_expressions = {}
+        
         if self.xblock_id is None:
             self.xblock_id = unicode(self.location.replace(branch=None, version=None))
         
@@ -101,28 +106,43 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         if self.newly_created_block:
             self.newly_created_block =  (db_service.is_block_in_db(self.xblock_id) is False)
         
-        # generate question template for newly created XBloc
-        if (self.newly_created_block is True):
+        
+        if (self.newly_created_block is True): # generate question template for newly created XBlock
             self.question_template, self.variables, self.expressions = question_service.generate_question_template()
             db_service.create_question_template(self.xblock_id, self.question_template, self.variables, self.expressions)
             self.newly_created_block = False
-
-        # fetch quetion template if necessary
-        if (self.question_template == ""):
-            self.question_template, self.variables, self.expressions = db_service.fetch_question_template_data(self.xblock_id)
-        
+        else: # existing question template in dbms
+            self.load_data_from_dbms()
         
         # generate question from template if necessary
         if (self.generated_question == ""):
             self.generated_question, self.generated_variables = question_service.generate_question(self.question_template, self.variables)
+        
+        
+        for expression_name, expression_value in self.expressions.iteritems():
+            self.submitted_expressions[expression_name] = ''
+        
+        
+        # load submission data
+        submissions = sub_api.get_submissions(self.student_item_key, 1)
+        if submissions:
+            latest_submission = submissions[0]
 
-            
-        context = {
-            'point_string': self.point_string,
-            'question': self.generated_question,
-            'variables': self.generated_question,
-            'expressions': self.expressions
-        }
+            # parse the answer
+            answer = latest_submission['answer']
+            self.generated_question = answer['generated_question']
+            saved_submitted_expressions = json.loads(answer['expression_values'])
+            for submitted_expr_name, submitted_expr_val in saved_submitted_expressions.iteritems():
+                self.submitted_expressions[submitted_expr_name] = submitted_expr_val
+
+        
+        self.serialize_data_to_context(context)    
+        
+        context['point_string'] = self.point_string
+        context['question'] = self.generated_question
+        context['xblock_id'] = self.xblock_id
+        context['submitted_expressions'] = self.submitted_expressions
+
         
         frag = Fragment()
         frag.content = loader.render_template('static/html/formula_exercise_block.html', context)
@@ -136,10 +156,26 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         """
         Render a form for editing this XBlock (override the StudioEditableXBlockMixin's method)
         """
-
-        if self.xblock_id is None:
-            self.xblock_id = unicode(self.location.replace(branch=None, version=None))
         
+        # TODO check that if the XBlock has been submitted already to view the "disable_edit.html" page
+#        location = self.location.replace(branch=None, version=None)  # Standardize the key in case it isn't already
+#        course_id=unicode(location.course_key),
+#        item_id=unicode(location),
+#        item_type=self.scope_ids.block_type,
+#        submissions = sub_api.get_all_submissions(course_id, item_id, item_type) # Not a good query
+#        if submissions:
+#            disabled_context = {}
+#            disabled_context['xblock_id'] = unicode(self.location.replace(branch=None, version=None))
+#            disabled_context['submissions'] = str(len(submissions))
+            
+            
+#            disabled_edit_fragment = Fragment()
+#            disabled_edit_fragment.content = loader.render_template('static/html/formula_exercise_disabled_studio_edit.html', disabled_context)
+#            disabled_edit_fragment.add_javascript(loader.load_unicode('static/js/src/formula_exercise_disabled_studio_edit.js'))
+#            disabled_edit_fragment.initialize_js('StudioDisabledEditXBlock')
+#            return disabled_edit_fragment
+
+
         fragment = Fragment()
         context = {'fields': []}
         # Build a list of all the fields that can be edited:
@@ -156,12 +192,9 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
                 
         
         # (re-)fetch data from the database
-        # self.clear_cache_question_template_data()
-        self.question_template, self.variables, self.expressions = db_service.fetch_question_template_data(self.xblock_id)
-        # TODO refresh XBlock's data
-
-        context["question_template"] = self.question_template
-        context["xblock_id"] = self.xblock_id
+        self.load_data_from_dbms()
+        # self.serialize_data_to_context(context) ??? REMOVE not necessary, remove 
+        context['question_template'] = self.question_template
         context["variables"] = self.variables
         context["expressions"] = self.expressions
         
@@ -173,12 +206,30 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         return fragment
     
     
+    def serialize_data_to_context(self, context):
+        """
+        """
+        context['saved_question_template'] = self.question_template
+        context['serialized_variables'] = json.dumps(self.variables)
+        context['serialized_expressions'] = json.dumps(self.expressions)
+        context['serialized_generated_variables'] = json.dumps(self.generated_variables)
+    
+    
+    def deserialize_data_from_context(self, context):
+        """
+        """
+        self.question_template = context['saved_question_template']
+        self.variables = json.loads(context['serialized_variables'])
+        self.expressions = json.loads(context['serialized_expressions'])
+        self.generated_variables = json.loads(context['serialized_generated_variables'])
+    
+    
+    def load_data_from_dbms(self):
 
-    def clear_cache_question_template_data(self):
-        self.question_template = ""
-        self.variables.clear()
-        self.expressions.clear()
-
+        if self.xblock_id is None:
+            self.xblock_id = unicode(self.location.replace(branch=None, version=None))
+        
+        self.question_template, self.variables, self.expressions = db_service.fetch_question_template_data(self.xblock_id)
 
 
     @XBlock.json_handler
@@ -186,21 +237,43 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         """
         AJAX handler for Submit button
         """
-        submission = sub_api.create_submission(self.student_item_key, data)
         
-        submitted_energy = data["energy"]
-        self.energy = int(submitted_energy) # ??? correct way to set value?
-        if question_service.is_answer_correct(int(self.apples), int(self.meters), int(self.energy)):
-            sub_api.set_score(submission['uuid'], self.max_points, self.max_points)
-        else:
-            sub_api.set_score(submission['uuid'], 0, self.max_points)
-            
+        submitted_expression_values = json.loads(data['submitted_expression_values'])
+        self.deserialize_data_from_context(data)
         
-        new_score = sub_api.get_score(self.student_item_key)
         
+        # prepare "expressions" data for formula_service.evaluate_expressions(variables, expressions)
+        formula_service_expressions = {}
+        for expression_name, expression in self.expressions.iteritems(): # expressions is unicode???
+            formula_service_expressions[expression_name] = [ expression, submitted_expression_values[expression_name] ]
+        
+        
+        # prepare "variables" data for formula_service.evaluate_expressions(variables, expressions)
+        formula_service_variables = {} # TODO cache the following loop
+        for var_name, var_value in self.generated_variables.iteritems():
+            formula_service_variables[var_name] = [ self.variables[var_name], var_value ]
+        
+        
+        # ask cexprtk to verify submit result
+        evaluation_result = formula_service.evaluate_expressions(formula_service_variables, formula_service_expressions)
+        points_earned = 1;
+        for expr_name, point in evaluation_result.iteritems():
+            if (point == 0):
+                points_earned = 0
+                break
+        
+        
+        # save the submission
+        submission_data = {
+            'generated_question': data['saved_generated_question'],
+            'expression_values': data['submitted_expression_values']
+        }
+        submission = sub_api.create_submission(self.student_item_key, submission_data)
+        sub_api.set_score(submission['uuid'], points_earned, self.max_points)
+
         submit_result = {
-            'points_earned': new_score['points_earned'],
-            'points_possible': new_score['points_possible']
+            'points_earned': points_earned,
+            'points_possible': 1
         }
         return submit_result
 
@@ -225,8 +298,6 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         self.question_template = question_template
         self.variables = updated_variables
         self.expressions = updated_expressions
-        
-        # TODO re-generate: question, variables, expressions
     
     
     @property

@@ -25,6 +25,10 @@
 	padding: 5px !important;
 }
 
+.number_input_cell {
+	padding: 5px !important;
+}
+
 .remove_button {
 	width: 100px !important;
 	height: 35px !important;
@@ -41,4 +45,9 @@
 
 .question_template {
     width: 100%;
+}
+
+.validation_error {
+	color: rgb(255, 14, 14);
+	font-weight: bold;
 }

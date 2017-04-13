@@ -3,6 +3,7 @@ from mysql.connector import errorcode
 import settings as s
 
 
+
 def create_question_template(xblock_id, question_template, variables, expressions):
     connection = mysql.connector.connect(**s.database)
     
@@ -59,7 +60,7 @@ def fetch_question_template_data(xblock_id):
     
     
     # query variables
-    variable_query = "SELECT name, type, min_value, max_value, type, accuracy FROM edxapp.variable WHERE xblock_id = '" + xblock_id + "'"
+    variable_query = "SELECT name, type, min_value, max_value, type, decimal_places FROM edxapp.variable WHERE xblock_id = '" + xblock_id + "'"
     variable_query_cursor = connection.cursor()
     variable_query_cursor.execute(variable_query)
     row = variable_query_cursor.fetchone()
@@ -73,7 +74,7 @@ def fetch_question_template_data(xblock_id):
         variable['min_value'] = row[2]
         variable['max_value'] = row[3]
         variable['type'] = row[4]
-        variable['accuracy'] = row[5]
+        variable['decimal_places'] = row[5]
         
         variables[variable['name']] = variable
         row = variable_query_cursor.fetchone()
@@ -82,7 +83,7 @@ def fetch_question_template_data(xblock_id):
     
     
     # query expressions
-    expression_query = "SELECT name, formula, accuracy FROM edxapp.expression WHERE xblock_id = '" + xblock_id + "'"
+    expression_query = "SELECT name, type, formula, decimal_places FROM edxapp.expression WHERE xblock_id = '" + xblock_id + "'"
     expression_query_cursor = connection.cursor()
     expression_query_cursor.execute(expression_query)
     row = expression_query_cursor.fetchone()
@@ -92,8 +93,9 @@ def fetch_question_template_data(xblock_id):
     while row is not None:
         expression = {}
         expression['name'] = row[0]
-        expression['formula'] = row[1]
-        expression['accuracy'] = row[2]
+        expression['type'] = row[1]
+        expression['formula'] = row[2]
+        expression['decimal_places'] = row[3]
         
         expressions[expression['name']] = expression
         row = expression_query_cursor.fetchone()
@@ -148,9 +150,9 @@ def create_variables(xblock_id, connection, updated_variables):
     """
     
     cursor = connection.cursor()
-    query = "INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, accuracy) VALUES (%s, %s, %s, %s, %s, %s)"
+    query = "INSERT INTO edxapp.variable (xblock_id, name, type, min_value, max_value, decimal_places) VALUES (%s, %s, %s, %s, %s, %s)"
     for variable_name, variable in updated_variables.iteritems():
-        updated_variable_data = (xblock_id, variable_name, variable['type'], variable['min_value'], variable['max_value'], variable['accuracy'])
+        updated_variable_data = (xblock_id, variable_name, variable['type'], variable['min_value'], variable['max_value'], variable['decimal_places'])
         cursor.execute(query, updated_variable_data)
     
     cursor.close()
@@ -162,9 +164,9 @@ def create_expressions(xblock_id, connection, updated_expressions):
     """
     
     cursor = connection.cursor()
-    query = "INSERT INTO edxapp.expression (xblock_id, name, formula, accuracy) VALUES (%s, %s, %s, %s)"
+    query = "INSERT INTO edxapp.expression (xblock_id, name, type, formula, decimal_places) VALUES (%s, %s, %s, %s, %s)"
     for expression_name, expression in updated_expressions.iteritems():
-        updated_expression_data = (xblock_id, expression_name, expression['formula'], expression['accuracy'])
+        updated_expression_data = (xblock_id, expression_name, expression['type'], expression['formula'], expression['decimal_places'])
         cursor.execute(query, updated_expression_data)
     
     cursor.close()
@@ -184,3 +186,24 @@ def is_block_in_db(xblock_id):
     connection.close()
 
     return (rowcount > 0)
+
+
+def delete_xblock(xblock_id):
+    
+    connection = mysql.connector.connect(**s.database)
+    
+    # query the id column
+    query_id_str = "SELECT id from edxapp.question_template WHERE xblock_id like '%" + xblock_id + "%'"  
+    cursor = connection.cursor()
+    cursor.execute(query_id_str)
+    row = cursor.fetchone()
+    if row is not None: # delete question_template by id
+        question_record_id = row[0]
+        delete_query_str = "DELETE FROM edxapp.question_template WHERE id = " + str(question_record_id)
+        cursor.execute(delete_query_str)
+        cursor.close
+
+    cursor.close()
+    connection.commit()
+    connection.close()
+    

@@ -1,41 +1,41 @@
 import re
 from random import randint, uniform
 
-
-APPLES_VARIABLE_PATTERN = re.compile("<n>");
-compiled_apples_variable_pattern = re.compile(APPLES_VARIABLE_PATTERN)
-
-METERS_VARIABLES_PATTERN = re.compile("<m>")
-compiled_meters_variable_pattern = re.compile(METERS_VARIABLES_PATTERN)
+from decimal import *
 
 
-def is_answer_correct(apples, meters, energy):
-    return (energy == (apples * meters))
+ONE_PLACE = Decimal(10) ** -1
+TWO_PLACES = Decimal(10) ** -2
+THREE_PLACES = Decimal(10) ** -3
+FOUR_PLACES = Decimal(10) ** -4
+FIVE_PLACES = Decimal(10) ** -5
+SIX_PLACES = Decimal(10) ** -6
+SEVEN_PLACES = Decimal(10) ** -7
 
-def is_answer_correct_BDD(template, apples, meters, energy):
-    pass
+DECIMAL_PLACES = [ ONE_PLACE, TWO_PLACES, THREE_PLACES, FOUR_PLACES, FIVE_PLACES, SIX_PLACES, SEVEN_PLACES ]
+
 
 
 def generate_question_template():
     """
     Generates data for a newly created question template
     """
-    sample_template = "Given a = <a> and b = <b>. Calculate the sum, difference, multiplication and quotient."
+    sample_template = "Given a = <a> and b = <b>. Calculate the sum, difference of a and b."
     
     a_variable = {
         'name': 'a',
         'min_value': 0,
         'max_value': 10,
         'type': 'int',
-        'accuracy': 2
+        'decimal_places': 2
     }
     
     b_variable = {
-        'name': 'a',
+        'name': 'b',
         'min_value': 10,
         'max_value': 20,
         'type': 'int',
-        'accuracy': 2
+        'decimal_places': 2
     }
     
     variables = {
@@ -46,36 +46,33 @@ def generate_question_template():
     
     sum_expression = {
         'name': 'Sum',
+        'type': 'float',
         'formula': 'a+b',
-        'accuracy': 2
+        'decimal_places': 2,
     }
     
     difference_expression = {
         'name': 'Difference',
+        'type': 'float',
         'formula': 'a-b',
-        'accuracy': 2
-    }
-    
-    multiplication_expression = {
-        'name': 'Multiplication',
-        'formula': 'a*b',
-        'accuracy': 2
-    }
-    
-    quotient_expression = {
-        'name': 'Quotient',
-        'formula': 'a+b',
-        'accuracy': 2
+        'decimal_places': 2,
     }
     
     expressions = {
         'Sum': sum_expression,
         'Difference': difference_expression,
-        'Multiplication': multiplication_expression,
-        'Quotient': quotient_expression
     }
     
     return sample_template, variables, expressions
+
+
+def get_decimal_places(var_decimal_places_int):
+    if (var_decimal_places_int < 1):
+        return ONE_PLACE
+    elif (var_decimal_places_int > 7):
+        return SEVEN_PLACES
+    
+    return DECIMAL_PLACES[var_decimal_places_int - 1]
 
 
 def generate_question(template, variables):
@@ -88,12 +85,15 @@ def generate_question(template, variables):
     for var_name, variable in variables.iteritems():
         compiled_variable_patterns[var_name] = re.compile('<' + var_name + '>')
         var_type = variable['type']
+        var_decimal_places_int = int(variable['decimal_places'])
         
         var_value = ""
         if var_type == 'int':
             var_value = str(randint(int(variable['min_value']), int(variable['max_value'])))
         else: # float
             var_value = str(uniform(float(variable['min_value']), float(variable['max_value'])))
+            var_decimal_places = get_decimal_places(var_decimal_places_int)
+            var_value = str(Decimal(var_value).quantize(var_decimal_places))
 
         generated_variables[var_name] = var_value
         
@@ -105,29 +105,14 @@ def generate_question(template, variables):
     return generated_question, generated_variables
 
 
-def generate_question_with_apples_and_meters(template, apples, meters):
-    question_with_apples = compiled_apples_variable_pattern.sub(str(apples), template)
-    return compiled_meters_variable_pattern.sub(str(meters), question_with_apples)
-
-def internal_generate_question(template):
-    apples = randint(1, 10)
-    meters = randint(2, 20)
-    return [ apples, meters, generate_question_with_apples_and_meters(template, apples, meters) ]
-
-
 if __name__ == "__main__":
-#    test_template = "What is the energy to raise <n> apples to <m> meters?"
-#    print('test_template: ' + test_template)
-#    print(generate_question_with_apples_and_meters(test_template, 10, 15))
-    
-    
     test_template1 = "What is the energy to raise <n> apples to <m> meters?"
     n_variable = {
         'name': 'n',
         'type': 'int',
         'min_value': 1,
         'max_value': 10,
-        'accuracy': 2
+        'decimal_places': 2
     }
     
     m_variable = {
@@ -135,7 +120,7 @@ if __name__ == "__main__":
         'type': 'int',
         'min_value': 5,
         'max_value': 20,
-        'accuracy': 2
+        'decimal_places': 2
     }
     
     variables = {
