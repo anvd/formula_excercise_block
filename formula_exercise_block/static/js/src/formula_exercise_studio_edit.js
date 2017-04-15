@@ -118,7 +118,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     });
 
     var studioSubmit = function(data) {
-        var handlerUrl = runtime.handlerUrl(xblockElement, 'submit_studio_edits');
+        var handlerUrl = runtime.handlerUrl(xblockElement, 'fe_submit_studio_edits');
         runtime.notify('save', {state: 'start', message: gettext("Saving")});
         $.ajax({
             type: "POST",
@@ -142,7 +142,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
         });
     };
     
-
+    
     $(xblockElement).find('a[name=save_button]').bind('click', function(e) {
     	console.log("Save button clicked");
     	
@@ -150,14 +150,14 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     	
     	// "General information" tab
         e.preventDefault();
-        var values = {};
-        var notSet = []; // List of field names that should be set to default values
+        var fieldValues = {};
+        var fieldValuesNotSet = []; // List of field names that should be set to default values
         for (var i in fields) {
             var field = fields[i];
             if (field.isSet()) {
-                values[field.name] = field.val();
+                fieldValues[field.name] = field.val();
             } else {
-                notSet.push(field.name);
+                fieldValuesNotSet.push(field.name);
             }
             // Remove TinyMCE instances to make sure jQuery does not try to access stale instances
             // when loading editor for another block:
@@ -279,7 +279,7 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     				fillErrorMessage('Expression formula can not be empty');
     				return false;
     			}
-    			// TODO (server side) ceck parsable formula
+    			// TODO (server side) cexprtk parsable formula/expression
     			expression['formula'] = expression_formula;
     			
 
@@ -294,11 +294,24 @@ function StudioEditableXBlockMixin(runtime, xblockElement) {
     		}
     	});
         
-        if (error_message_element.children().length > 0) { // client-side validation error
+        // client-side validation error
+        if (error_message_element.children().length > 0) { 
         	return;
         }
-        	
-        studioSubmit({values: values, defaults: notSet, question_template: question_template, variables: variables, expressions: expressions});
+        
+        // server side validation
+        debugger;
+        var server_side_validation_url = runtime.handlerUrl(xblockElement, 'validate_expressions');
+        $.post(server_side_validation_url, JSON.stringify(expressions)).success(function(validationResult) {
+	    	debugger;
+	    	if (Object.keys(validationResult).length > 0) { // error
+	    		var errMsg = 'The following expressions can not be parsed: '
+	    		for (var expression_name in validationResult) { errMsg += "[ " + (expression_name + ": " + validationResult[expression_name] + " ], "); }
+	    		fillErrorMessage(errMsg);
+	    	} else { // no error
+	    		studioSubmit({values: fieldValues, defaults: fieldValuesNotSet, question_template: question_template, variables: variables, expressions: expressions});
+	    	}
+        });
     });
 
 

@@ -13,7 +13,10 @@ function FormulaExerciseXBlock(runtime, xblockElement) {
 
 
 	function handleSubmissionResult(results) {
-    	$(xblockElement).find('.problem-progress').html(results['points_earned'] + ' / ' + results['points_possible'] + ' points');
+    	$(xblockElement).find('.problem-progress').html(results['point_string']);
+    	if (results['submit_disabled'] == 'disabled') {
+    		$(xblockElement).find('input[name=submit-button]').attr('disabled','disabled')
+    	}
   	}
 
 

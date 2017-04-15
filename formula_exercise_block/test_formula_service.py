@@ -1,6 +1,7 @@
 import unittest
 
 import formula_service
+from django.template.defaultfilters import length
 
 class FormulaServiceTest(unittest.TestCase):
     
@@ -356,6 +357,48 @@ class FormulaServiceTest(unittest.TestCase):
         
         pass
         
+
+    def test_check_expressions(self):
+        
+        expression1 = {
+            'name': 'Sum',
+            'type': 'float',
+            'formula': 'a+b',
+            'decimal_places': 3
+        }
+        
+        expression2 = {
+            'name': 'expr2',
+            'type': 'float',
+            'formula': 'foo(a)',
+            'decimal_places': 3
+        }
+        
+        expression3 = {
+            'name': 'expr3',
+            'type': 'float',
+            'formula': 'a',
+            'decimal_places': 3
+        }
+
+        expression4 = {
+            'name': 'expr4',
+            'type': 'float',
+            'formula': 'log(a + 1)',
+            'decimal_places': 3
+        }
+        
+        expressions = {}
+        expressions[expression1['name']] = expression1
+        expressions[expression2['name']] = expression2
+        expressions[expression3['name']] = expression3
+        expressions[expression4['name']] = expression4
+        
+        
+        check_result = formula_service.check_expressions(expressions)
+        self.assertTrue(length(check_result) == 1)
+        self.assertTrue('expr2' in check_result)
+
 
 if __name__ == '__main__':
     unittest.main()

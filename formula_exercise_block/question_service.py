@@ -46,16 +46,16 @@ def generate_question_template():
     
     sum_expression = {
         'name': 'Sum',
-        'type': 'float',
+        'type': 'int',
         'formula': 'a+b',
-        'decimal_places': 2,
+        'decimal_places': 0,
     }
     
     difference_expression = {
         'name': 'Difference',
-        'type': 'float',
+        'type': 'int',
         'formula': 'a-b',
-        'decimal_places': 2,
+        'decimal_places': 0,
     }
     
     expressions = {

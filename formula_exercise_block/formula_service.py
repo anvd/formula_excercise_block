@@ -66,8 +66,7 @@ def evaluate_expressions(variables, expressions):
         # cexprtk_expression = cexprtk.Expression(expr_formula, symbol_table)
         cexprtk_expression_value = cexprtk_expression.value()
         
-        # compare the student's result to the calculated result --> TTODO use Decimal comparison
-        # TODO
+        # compare the student's result
         if (expr_type == 'int'):
             expr_val_decimal_places = 0
         if (areAlmostEqual(coerced_student_expression_value, cexprtk_expression_value, expr_val_decimal_places)):
@@ -75,8 +74,25 @@ def evaluate_expressions(variables, expressions):
         else:
             result[expr_name] = 0
     
-    
     return result
+
+
+def check_expressions(expressions):
+    """
+    Checks whether the expressions are parse-able
+    """
+    not_parseable_expressions = {}
+    
+    for expr_name, expression in expressions.iteritems():
+        expr_formula = expression['formula'] # BUG why this is unicode????
+        
+        try:
+            cexprtk.check_expression(expr_formula)
+        except cexprtk.ParseException:
+            not_parseable_expressions[expr_name] = expr_formula
+        
+    # TODO check that the expressions can be evaluated also
+    return not_parseable_expressions
 
 
 def areAlmostEqual(first, second, places=None, msg=None, delta=None):

@@ -3,13 +3,16 @@
 import pkg_resources
 
 from xblock.core import XBlock
-from xblock.fields import Scope, Integer, String
+from xblock.fields import Scope, JSONField, Integer, String, Boolean
 from xblock.fragment import Fragment
+
+from xblock.exceptions import JsonHandlerError, NoSuchViewError
+from xblock.validation import Validation
 
 from submissions import api as sub_api
 from sub_api_util import SubmittingXBlockMixin
 
-from xblockutils.studio_editable import StudioEditableXBlockMixin
+from xblockutils.studio_editable import StudioEditableXBlockMixin, FutureFields
 from xblockutils.resources import ResourceLoader
 
 import question_service
@@ -25,7 +28,7 @@ loader = ResourceLoader(__name__)
 @XBlock.needs("i18n")
 class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockMixin):
     """
-    TO-DO: XBlock life-cycle to initialize, open and close connection to MySQL server appropriately
+    Formula Exercise XBlock
     """
 
     display_name = String(
@@ -38,7 +41,8 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     max_attempts = Integer(
         display_name="Maximum Attempts",
         help="Defines the number of times a student can try to answer this problem. If the value is not set, infinite attempts are allowed.",
-        values={"min": 0}, scope=Scope.settings)
+        default=1,
+        values={"min": 1}, scope=Scope.settings)
     
     max_points = Integer(
         display_name="Possible points",
@@ -46,24 +50,15 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         default=1,
         scope=Scope.settings)
     
+    show_points_earned = Boolean(
+        display_name="Shows points earned",
+        help="Shows points earned",
+        default=True,
+        scope=Scope.settings)
+    
     
     xblock_id = None
     newly_created_block = True
-    
-    standard_question_template = String(
-        display_name="Question template",
-        help="Question template",
-        scope=Scope.settings,
-        default="???"
-    )
-    
-    standard_variables_str = String(
-        display_name="Standard",
-        help="Question template",
-        scope=Scope.settings,
-        default="???"
-    )
-    
     
     
     question_template = ""
@@ -75,12 +70,8 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     generated_variables = {}
     submitted_expressions = {}
     
-    
-    
 
-    # Fields are defined on the class.  You can access them in your code as
-    # self.<fieldname>.
-    editable_fields = ('display_name', 'max_attempts', 'max_points')
+    editable_fields = ('display_name', 'max_attempts', 'max_points', 'show_points_earned')
 
     has_score = True
 
@@ -92,10 +83,9 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
 
     def student_view(self, context=None):
         """
-        The primary view of the FormulaExerciseXBlock, shown to students
-        when viewing courses.
+        The primary view of the FormulaExerciseXBlock, shown to students when viewing courses.
         """
-        
+
         context = {}
         self.submitted_expressions = {}
         
@@ -123,7 +113,7 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
             self.submitted_expressions[expression_name] = ''
         
         
-        # load submission data
+        # load submission data to display the previously submitted result
         submissions = sub_api.get_submissions(self.student_item_key, 1)
         if submissions:
             latest_submission = submissions[0]
@@ -134,6 +124,12 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
             saved_submitted_expressions = json.loads(answer['expression_values'])
             for submitted_expr_name, submitted_expr_val in saved_submitted_expressions.iteritems():
                 self.submitted_expressions[submitted_expr_name] = submitted_expr_val
+                
+            attempt_number = latest_submission['attempt_number']
+            if (attempt_number >= self.max_attempts):
+                context['disabled'] = 'disabled'
+            else:
+                context['disabled'] = ''
 
         
         self.serialize_data_to_context(context)    
@@ -157,25 +153,18 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         Render a form for editing this XBlock (override the StudioEditableXBlockMixin's method)
         """
         
-        # TODO check that if the XBlock has been submitted already to view the "disable_edit.html" page
-#        location = self.location.replace(branch=None, version=None)  # Standardize the key in case it isn't already
-#        course_id=unicode(location.course_key),
-#        item_id=unicode(location),
-#        item_type=self.scope_ids.block_type,
-#        submissions = sub_api.get_all_submissions(course_id, item_id, item_type) # Not a good query
-#        if submissions:
-#            disabled_context = {}
-#            disabled_context['xblock_id'] = unicode(self.location.replace(branch=None, version=None))
-#            disabled_context['submissions'] = str(len(submissions))
-            
-            
-#            disabled_edit_fragment = Fragment()
-#            disabled_edit_fragment.content = loader.render_template('static/html/formula_exercise_disabled_studio_edit.html', disabled_context)
-#            disabled_edit_fragment.add_javascript(loader.load_unicode('static/js/src/formula_exercise_disabled_studio_edit.js'))
-#            disabled_edit_fragment.initialize_js('StudioDisabledEditXBlock')
-#            return disabled_edit_fragment
+        # if the XBlock has been submitted already then disable the studio_edit screen
+        location = self.location.replace(branch=None, version=None)  # Standardize the key in case it isn't already
+        item_id=unicode(location)
+        if db_service.is_xblock_submitted(item_id):
+            disabled_edit_fragment = Fragment()
+            disabled_edit_fragment.content = loader.render_template('static/html/formula_exercise_disabled_studio_edit.html', {})
+            disabled_edit_fragment.add_javascript(loader.load_unicode('static/js/src/formula_exercise_disabled_studio_edit.js'))
+            disabled_edit_fragment.initialize_js('StudioDisabledEditXBlock')
+            return disabled_edit_fragment
 
-
+        
+        # Student not yet submit then we can edit the XBlock
         fragment = Fragment()
         context = {'fields': []}
         # Build a list of all the fields that can be edited:
@@ -198,7 +187,7 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         context["variables"] = self.variables
         context["expressions"] = self.expressions
         
-        
+                
         fragment.content = loader.render_template('static/html/formula_exercise_studio_edit.html', context)
         fragment.add_css(self.resource_string("static/css/formula_exercise_block_studio_edit.css"))
         fragment.add_javascript(loader.load_unicode('static/js/src/formula_exercise_studio_edit.js'))
@@ -208,6 +197,7 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     
     def serialize_data_to_context(self, context):
         """
+        Save data to context to re-use later to avoid re-accessing the DBMS
         """
         context['saved_question_template'] = self.question_template
         context['serialized_variables'] = json.dumps(self.variables)
@@ -217,6 +207,7 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     
     def deserialize_data_from_context(self, context):
         """
+        De-serialize data previously saved to context
         """
         self.question_template = context['saved_question_template']
         self.variables = json.loads(context['serialized_variables'])
@@ -225,6 +216,9 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     
     
     def load_data_from_dbms(self):
+        """
+        Load question template data from MySQL
+        """
 
         if self.xblock_id is None:
             self.xblock_id = unicode(self.location.replace(branch=None, version=None))
@@ -256,7 +250,7 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         
         # ask cexprtk to verify submit result
         evaluation_result = formula_service.evaluate_expressions(formula_service_variables, formula_service_expressions)
-        points_earned = 1;
+        points_earned = self.max_points;
         for expr_name, point in evaluation_result.iteritems():
             if (point == 0):
                 points_earned = 0
@@ -270,24 +264,34 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         }
         submission = sub_api.create_submission(self.student_item_key, submission_data)
         sub_api.set_score(submission['uuid'], points_earned, self.max_points)
+        
+        submit_result = {}
+        submit_result['point_string'] = self.point_string
 
-        submit_result = {
-            'points_earned': points_earned,
-            'points_possible': 1
-        }
+        # disable the "Submit" button once the submission attempts reach max_attemps value
+        attempt_number = submission['attempt_number']
+        if (attempt_number >= self.max_attempts):
+            submit_result['submit_disabled'] = 'disabled'
+        else:
+            submit_result['submit_disabled'] = ''
+
         return submit_result
 
     
     @XBlock.json_handler
-    def submit_studio_edits(self, data, suffix=''):
-        # TODO how to initialize default data when creating a Formula Exercise XBlock
-        
-        # validate and save question template
-        # call StudioEditableXBlockMixin.submit_studio_edits to save XBlock configuration
+    def validate_expressions(self, expressions, suffix=''):
+        return formula_service.check_expressions(expressions)
+    
+    
+    @XBlock.json_handler
+    def fe_submit_studio_edits(self, data, suffix=''):
+        """
+        AJAX handler for studio edit submission
+        """
         
         if self.xblock_id is None:
             self.xblock_id = unicode(self.location.replace(branch=None, version=None))
-        
+            
         question_template = data['question_template']
         updated_variables = data['variables']
         updated_expressions = data['expressions']
@@ -298,17 +302,53 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         self.question_template = question_template
         self.variables = updated_variables
         self.expressions = updated_expressions
+        
+        # call parent method
+        # StudioEditableXBlockMixin.submit_studio_edits(self, data, suffix)
+        # self.submit_studio_edits(data, suffix)
+        # super(FormulaExerciseXBlock, self).submit_studio_edits(data, suffix)
+        
+        # copy from StudioEditableXBlockMixin (can not call parent method)
+        values = {}  # dict of new field values we are updating
+        to_reset = []  # list of field names to delete from this XBlock
+        for field_name in self.editable_fields:
+            field = self.fields[field_name]
+            if field_name in data['values']:
+                if isinstance(field, JSONField):
+                    values[field_name] = field.from_json(data['values'][field_name])
+                else:
+                    raise JsonHandlerError(400, "Unsupported field type: {}".format(field_name))
+            elif field_name in data['defaults'] and field.is_set_on(self):
+                to_reset.append(field_name)
+        self.clean_studio_edits(values)
+        validation = Validation(self.scope_ids.usage_id)
+        # We cannot set the fields on self yet, because even if validation fails, studio is going to save any changes we
+        # make. So we create a "fake" object that has all the field values we are about to set.
+        preview_data = FutureFields(
+            new_fields_dict=values,
+            newly_removed_fields=to_reset,
+            fallback_obj=self
+        )
+        self.validate_field_data(validation, preview_data)
+        if validation:
+            for field_name, value in values.iteritems():
+                setattr(self, field_name, value)
+            for field_name in to_reset:
+                self.fields[field_name].delete_from(self)
+            return {'result': 'success'}
+        else:
+            raise JsonHandlerError(400, validation.to_json())
+        
     
     
     @property
     def point_string(self):
-        score = sub_api.get_score(self.student_item_key)
-        
-        if score != None:
-            return str(score['points_earned']) + ' / ' + str(score['points_possible']) + ' point(s)'
-        else:
-            return str(self.max_points) + ' point(s) possible'
-
+        if self.show_points_earned:
+            score = sub_api.get_score(self.student_item_key)
+            if score != None:
+                return str(score['points_earned']) + ' / ' + str(score['points_possible']) + ' point(s)'
+            
+        return str(self.max_points) + ' point(s) possible'
     
     # TO-DO: change this to create the scenarios you'd like to see in the
     # workbench while developing your XBlock.

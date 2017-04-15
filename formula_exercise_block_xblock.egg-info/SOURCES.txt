@@ -1,11 +1,14 @@
 formula_exercise_block/__init__.py
 formula_exercise_block/formula_exercise_block.py
-formula_exercise_block/question_generator.py
+formula_exercise_block/question_service.py
+formula_exercise_block/formula_service.py
+formula_exercise_block/settings.py
 formula_exercise_block/sub_api_util.py
 formula_exercise_block/static/README.txt
 formula_exercise_block/static/css/formula_exercise_block.css
 formula_exercise_block/static/html/formula_exercise_block.html
 formula_exercise_block/static/js/src/formula_exercise_block.js
+formula_exercise_block/static/js/src/formula_exercise_studio_block.js
 formula_exercise_block_xblock.egg-info/PKG-INFO
 formula_exercise_block_xblock.egg-info/SOURCES.txt
 formula_exercise_block_xblock.egg-info/dependency_links.txt

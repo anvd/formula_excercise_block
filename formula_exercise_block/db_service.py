@@ -207,3 +207,26 @@ def delete_xblock(xblock_id):
     connection.commit()
     connection.close()
     
+    
+def is_xblock_submitted(item_id):
+    
+    # 1. TABLE submissions_studentitem(id)
+    # 2. TABLE submissions_submission(student_item_id)
+    """
+    SELECT count(*) FROM edxapp.submissions_submission WHERE student_item_id IN (SELECT id FROM edxapp.submissions_studentitem WHERE item_id = item_id )
+    """
+    
+    is_submitted = False
+    
+    query = "SELECT count(*) FROM edxapp.submissions_submission WHERE student_item_id IN (SELECT id FROM edxapp.submissions_studentitem WHERE item_id = '" + item_id + "')"
+    connection = mysql.connector.connect(**s.database)
+    cursor = connection.cursor()
+    cursor.execute(query)
+    row = cursor.fetchone()
+    if row is not None:
+        is_submitted = row[0] > 0
+        
+    cursor.close()
+    connection.close()
+
+    return is_submitted    
