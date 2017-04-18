@@ -135,6 +135,13 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
             # parse the answer
             answer = latest_submission['answer']
             self.generated_question = answer['generated_question']
+            
+            if ('variable_values' in answer): # backward compatibility
+                saved_generated_variables = json.loads(answer['variable_values'])
+                for var_name, var_value in saved_generated_variables.iteritems():
+                    self.generated_variables[var_name] = var_value
+            
+            
             saved_submitted_expressions = json.loads(answer['expression_values'])
             for submitted_expr_name, submitted_expr_val in saved_submitted_expressions.iteritems():
                 self.submitted_expressions[submitted_expr_name] = submitted_expr_val
@@ -276,7 +283,8 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         # save the submission
         submission_data = {
             'generated_question': data['saved_generated_question'],
-            'expression_values': data['submitted_expression_values']
+            'expression_values': data['submitted_expression_values'],
+            'variable_values': data['serialized_generated_variables']
         }
         submission = sub_api.create_submission(self.student_item_key, submission_data)
         sub_api.set_score(submission['uuid'], points_earned, self.max_points)
