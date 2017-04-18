@@ -23,6 +23,10 @@ pre {
     float: right;
 }
 
+.expression_value_alignment {
+	float: left;
+}
+
 .formula_value_input {
 	padding: 5px !important;
 }

@@ -1,4 +1,5 @@
-<div class="problem-progress">{{ point_string }}</div>
+<div name="attempt-number" class=".attempt-number">{{ attempt_number }}</div>
+<div name="problem-progress" class=".problem-progress">{{ point_string }}</div>
 
 <input type="hidden" name="question_template" value="{{saved_question_template}}">
 <input type="hidden" name="variables" value="{{serialized_variables}}">
@@ -13,20 +14,27 @@
 	<pre>{{ question }}</pre>
 	
     <!-- Expressions -->
-	<div class="wrapper-comp-setting">
+	<div name="expressions_div" class="wrapper-comp-setting">
 		<table name="student_view_expressions_table" class="fe_student_expressions_table">
 			{% for expression_name, expression_value in submitted_expressions.iteritems %}
 				<tr class="formula_edit_table_row">
 					<td width="10%"></td>		
 					<td width="15%" class="table_cell_alignment"><label class="label setting-label expression_name_alignment" for="expression-{{expression_name}}">{{expression_name}}</label></td>
 					<td width="5%"></td>
-					<td width="40%" class="table_cell_alignment"><input type="text" class="field-data-control formula_value_input" id="expression-{{expression_name}}" value="{{ expression_value }}"></td>
+					<td width="40%" class="table_cell_alignment"><input type="text" class="field-data-control formula_value_input" id="expression-{{expression_name}}" value="{{expression_value}}"></td>
 					<td width="30%"></td>
 				</tr>						
 			{% endfor %}
 		</table>
 	</div>
-
+	
+	<!-- Answer -->
+	<div name="answer" class="wrapper-comp-setting">
+	</div>
+	
 	<br/>
     <input type="button" class="input-main" name='submit-button' {{disabled}} value="Submit" />
+    {% if show_answer %}
+    	<input type="button" class="input-main" name='show_answer-button' value="Show Answer" />
+    {% endif %}
 </div>

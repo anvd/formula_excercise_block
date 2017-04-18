@@ -33,14 +33,14 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
 
     display_name = String(
         display_name="Formula Exercise XBlock",
-        help="This name appears in the horizontal navigation at the top of the page",
+        help="This name appears in the horizontal navigation at the top of the page.",
         scope=Scope.settings,
         default="Formula Exercise XBlock"
     )
 
     max_attempts = Integer(
         display_name="Maximum Attempts",
-        help="Defines the number of times a student can try to answer this problem. If the value is not set, infinite attempts are allowed.",
+        help="Defines the number of times a student can try to answer this problem.",
         default=1,
         values={"min": 1}, scope=Scope.settings)
     
@@ -53,6 +53,18 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     show_points_earned = Boolean(
         display_name="Shows points earned",
         help="Shows points earned",
+        default=True,
+        scope=Scope.settings)
+    
+    show_submission_times = Boolean(
+        display_name="Shows submission times",
+        help="Shows submission times",
+        default=True,
+        scope=Scope.settings)
+    
+    show_answer = Boolean(
+        display_name="Show Answer",
+        help="Defines when to show the 'Show/Hide Answer' button",
         default=True,
         scope=Scope.settings)
     
@@ -70,8 +82,10 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
     generated_variables = {}
     submitted_expressions = {}
     
+    attempt_number = 0
+    
 
-    editable_fields = ('display_name', 'max_attempts', 'max_points', 'show_points_earned')
+    editable_fields = ('display_name', 'max_attempts', 'max_points', 'show_points_earned', 'show_submission_times', 'show_answer')
 
     has_score = True
 
@@ -125,8 +139,8 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
             for submitted_expr_name, submitted_expr_val in saved_submitted_expressions.iteritems():
                 self.submitted_expressions[submitted_expr_name] = submitted_expr_val
                 
-            attempt_number = latest_submission['attempt_number']
-            if (attempt_number >= self.max_attempts):
+            self.attempt_number = latest_submission['attempt_number']
+            if (self.attempt_number >= self.max_attempts):
                 context['disabled'] = 'disabled'
             else:
                 context['disabled'] = ''
@@ -134,10 +148,12 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         
         self.serialize_data_to_context(context)    
         
+        context['attempt_number'] = self.attempt_number_string
         context['point_string'] = self.point_string
         context['question'] = self.generated_question
         context['xblock_id'] = self.xblock_id
         context['submitted_expressions'] = self.submitted_expressions
+        context['show_answer'] = self.show_answer
 
         
         frag = Fragment()
@@ -236,20 +252,20 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         self.deserialize_data_from_context(data)
         
         
-        # prepare "expressions" data for formula_service.evaluate_expressions(variables, expressions)
+        # prepare "expressions" data for formula_service.evaluate_submission(variables, expressions)
         formula_service_expressions = {}
         for expression_name, expression in self.expressions.iteritems(): # expressions is unicode???
             formula_service_expressions[expression_name] = [ expression, submitted_expression_values[expression_name] ]
         
         
-        # prepare "variables" data for formula_service.evaluate_expressions(variables, expressions)
+        # prepare "variables" data for formula_service.evaluate_submission(variables, expressions)
         formula_service_variables = {} # TODO cache the following loop
         for var_name, var_value in self.generated_variables.iteritems():
             formula_service_variables[var_name] = [ self.variables[var_name], var_value ]
         
         
-        # ask cexprtk to verify submit result
-        evaluation_result = formula_service.evaluate_expressions(formula_service_variables, formula_service_expressions)
+        # ask cexprtk to verify the submission
+        evaluation_result = formula_service.evaluate_submission(formula_service_variables, formula_service_expressions)
         points_earned = self.max_points;
         for expr_name, point in evaluation_result.iteritems():
             if (point == 0):
@@ -269,8 +285,9 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
         submit_result['point_string'] = self.point_string
 
         # disable the "Submit" button once the submission attempts reach max_attemps value
-        attempt_number = submission['attempt_number']
-        if (attempt_number >= self.max_attempts):
+        self.attempt_number = submission['attempt_number']
+        submit_result['attempt_number'] = self.attempt_number_string
+        if (self.attempt_number >= self.max_attempts):
             submit_result['submit_disabled'] = 'disabled'
         else:
             submit_result['submit_disabled'] = ''
@@ -349,6 +366,35 @@ class FormulaExerciseXBlock(XBlock, SubmittingXBlockMixin, StudioEditableXBlockM
                 return str(score['points_earned']) + ' / ' + str(score['points_possible']) + ' point(s)'
             
         return str(self.max_points) + ' point(s) possible'
+    
+    
+    @property
+    def attempt_number_string(self):
+        if (self.show_submission_times):
+            return "You have submitted " + str(self.attempt_number) + "/" + str(self.max_attempts) + " time(s)"
+        
+        return ""
+    
+    
+    @XBlock.json_handler
+    def show_answer_handler(self, data, suffix=''):
+        """
+        AJAX handler for "Show/Hide Answer" button
+        """
+        self.deserialize_data_from_context(data)
+        
+        # prepare "variables" data for formula_service.evaluate_submission(variables, expressions)
+        formula_service_variables = {} # TODO cache the following loop
+        for var_name, var_value in self.generated_variables.iteritems():
+            formula_service_variables[var_name] = [ self.variables[var_name], var_value ]
+        
+        # ask cexprtk to evaluate the expressions
+        expression_values = formula_service.evaluate_expressions(formula_service_variables, self.expressions)
+
+        return {
+            'expression_values': expression_values
+        }
+    
     
     # TO-DO: change this to create the scenarios you'd like to see in the
     # workbench while developing your XBlock.
