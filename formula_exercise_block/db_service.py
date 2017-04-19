@@ -192,20 +192,28 @@ def delete_xblock(xblock_id):
     
     connection = mysql.connector.connect(**s.database)
     
-    # query the id column
-    query_id_str = "SELECT id from edxapp.question_template WHERE xblock_id like '%" + xblock_id + "%'"  
+    delete_query_str = "DELETE FROM edxapp.question_template WHERE xblock_id like '%" + xblock_id + "%'"
     cursor = connection.cursor()
-    cursor.execute(query_id_str)
-    row = cursor.fetchone()
-    if row is not None: # delete question_template by id
-        question_record_id = row[0]
-        delete_query_str = "DELETE FROM edxapp.question_template WHERE id = " + str(question_record_id)
-        cursor.execute(delete_query_str)
-        cursor.close
-
+    cursor.execute(delete_query_str)
+    
     cursor.close()
     connection.commit()
     connection.close()
+    
+    # query the id column
+    # query_id_str = "SELECT id from edxapp.question_template WHERE xblock_id like '%" + xblock_id + "%'"  
+    #cursor = connection.cursor()
+    #cursor.execute(query_id_str)
+    #row = cursor.fetchone()
+    #if row is not None: # delete question_template by id
+    #    question_record_id = row[0]
+    #    delete_query_str = "DELETE FROM edxapp.question_template WHERE id = " + str(question_record_id)
+    #    cursor.execute(delete_query_str)
+    #    cursor.close
+
+    #cursor.close()
+    #connection.commit()
+    #connection.close()
     
     
 def is_xblock_submitted(item_id):
