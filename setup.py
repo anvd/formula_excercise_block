@@ -21,15 +21,25 @@ def package_data(pkg, roots):
 
 
 setup(
-    name='formula_exercise_block-xblock',
+    name='Formula Exercise XBlock',
     version='0.2',
-    description='formula_exercise_block XBlock',   # TODO: write a better description.
-    license='UNKNOWN',          # TODO: choose a license: 'AGPL v3' and 'Apache 2.0' are popular.
+    description='Formula Exercise XBlock',
+    license='LGPL-3.0',
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Programming Language :: Python :: 2.7',
+    ],
+    keywords='xblock open edx formula exercise',
+    author='Vo Duc An',
+    author_email='voducanvn@gmail.com',
     packages=[
         'formula_exercise_block',
     ],
     install_requires=[
         'XBlock',
+        'xblock-utils',
+        'cexprtk',
+        'mysql-connector-python'
     ],
     entry_points={
         'xblock.v1': [
