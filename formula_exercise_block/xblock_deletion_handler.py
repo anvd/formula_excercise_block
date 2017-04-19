@@ -20,12 +20,8 @@ def handle_formula_exercise_xblock_deleted(sender, usage_key, user_id, **kwargs)
     Returns:
         None
     """
-    log.info('BEFORE CUSTOM_handle_xblock_deleted: str(usage_key) :: ' + str(usage_key))
-
+    # log.info('BEFORE CUSTOM_handle_xblock_deleted: str(usage_key) :: ' + str(usage_key))
     usage_key = usage_key.for_branch(None)
-
-    log.info('DELETING Xblock with xblock_id :: ' + str(usage_key))
-    
+    # log.info('DELETING Xblock with xblock_id :: ' + str(usage_key))
     db_service.delete_xblock(str(usage_key))
-    
-    log.info('AFTER DELETING Xblock with xblock_id :: ' + str(usage_key))
+    # log.info('AFTER DELETING Xblock with xblock_id :: ' + str(usage_key))
