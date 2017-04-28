@@ -16,5 +16,15 @@ Based on the question template, variables and expressions, FEX generates a quest
 ## Answer evaluation
 The user answers a question by filling in the expression textfields. When he/she submits the answer, FEX will perform the evaluation by computing the expression values based on the formula and compare the computed values with the submitted ones. FEX uses cexprtk [1] as the expression parser and evaluator. Hence, theoretically, we can use all the cexprtk's supported operators and functions.
 
+## Exercise definition example
+The following three images show the graphical user interface (GUI) for creating an exercise. The GUI consists of two tabs: General Information and Template. The user inputs common XBlock information in the General Information tab and question related information in the Template tab.
+
+![General Information tab](https://github.com/anvd/formula_excercise_block/blob/master/doc/FEX_GI.png "General Information tab")
+
+![Template tab (1)](https://github.com/anvd/formula_excercise_block/blob/master/doc/FEX_T1.png "Template tab (1)")
+
+![Template tab (2)](https://github.com/anvd/formula_excercise_block/blob/master/doc/FEX_T2.png "Template tab (2)")
+
+
 ## References
   1. cexprtk: https://pypi.python.org/pypi/cexprtk/0.2.0
