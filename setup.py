@@ -39,7 +39,7 @@ setup(
         'XBlock',
         'xblock-utils',
         'cexprtk',
-        'mysql-connector-python'
+        'mysql-connector==2.1.4'
     ],
     entry_points={
         'xblock.v1': [
